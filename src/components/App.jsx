@@ -14,11 +14,11 @@ class App extends Component {
     text: '',
     page: 1,
     searchData: [],
-    dataLargeImage: {},
+    dataLargeImage: null,
     isLoading: false,
-    isModalOpen: false,
     isError: false,
-    errorToastShown: false,
+    totalImages: 0,
+    totalHits: 0,
   };
 
   getSnapshotBeforeUpdate(prevProps, prevState) {
@@ -29,12 +29,19 @@ class App extends Component {
   }
 
   componentDidUpdate(prevProps, prevState, snapshot) {
-    if (prevState.text !== this.state.text) {
+    const { page, text, isError } = this.state
+    if (prevState.text !== text || prevState.page !== page) {
       this.getData();
     }
 
     if (prevState.searchData !== this.state.searchData && this.state.page > 1) {
       this.scrollPage(snapshot);
+    }
+
+    if (isError !== prevState.isError && isError) {
+          toast.error('Sorry, there are no images matching your search query.', {
+            autoClose: 5000,
+          });
     }
   }
 
@@ -43,46 +50,41 @@ class App extends Component {
       text: newText,
       page: 1,
       searchData: [],
-      isError: false,
+      totalImages: 0,
     });
   };
 
-  getData = () => {
+ getData = () => {
     const { text, page } = this.state;
-    this.setState({ isLoading: true });
+    this.setState({ isLoading: true, isError: false });
     getArticles(text, page)
       .then(data =>
         this.setState(prev => ({
           searchData: [...prev.searchData, ...data.hits],
-          page: prev.page + 1,
+          totalHits: data.totalHits,
         }))
       )
       .catch(() => {
         this.setState({ isError: true });
-
-        if (!this.state.errorToastShown) {
-          toast.error('Sorry, there are no images matching your search query.', {
-            autoClose: 5000,
-          });
-
-          this.setState({ errorToastShown: true });
-        }
       })
       .finally(() => this.setState({ isLoading: false }));
   };
 
   onLoadMore = () => {
-    this.getData();
+    const { searchData, totalHits, page } = this.state;
+    if (searchData.length < totalHits) {
+      this.setState(prev => ({
+        page: prev.page + 1,
+      }), () => {
+        this.getData();
+      });
+    }
   };
 
-  onHandleClickImage = data => {
+  onHandleClickImage = (data = null) => {
     this.setState({ dataLargeImage: data });
-    this.toogleModal();
   };
 
-  toogleModal = () => {
-    this.setState(({ isModalOpen }) => ({ isModalOpen: !isModalOpen }));
-  };
 
   scrollPage = snapshot => {
     window.scrollTo({
@@ -92,8 +94,7 @@ class App extends Component {
   };
 
   render() {
-    const { searchData, isLoading, isModalOpen, dataLargeImage } =
-      this.state;
+    const { searchData, isLoading, dataLargeImage, totalHits } = this.state;
 
     return (
       <div className={s.App}>
@@ -102,13 +103,15 @@ class App extends Component {
           searchData={searchData}
           onHandleClickImage={this.onHandleClickImage}
         />
-        {searchData.length !== 0 && <Button onLoadMore={this.onLoadMore} />}
+        {searchData.length !== 0 && searchData.length < totalHits && (
+          <Button onLoadMore={this.onLoadMore} />
+        )}
         {isLoading && <Loader />}
         <ToastContainer autoClose={5000} />
-        {isModalOpen && (
+        {dataLargeImage && (
           <Modal
             dataLargeImage={dataLargeImage}
-            toogleModal={this.toogleModal}
+            toogleModal={this.onHandleClickImage}
           />
         )}
       </div>
