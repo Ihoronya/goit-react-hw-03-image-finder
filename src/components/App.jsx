@@ -70,16 +70,16 @@ class App extends Component {
       .finally(() => this.setState({ isLoading: false }));
   };
 
-  onLoadMore = () => {
-    const { searchData, totalHits, page } = this.state;
-    if (searchData.length < totalHits) {
-      this.setState(prev => ({
-        page: prev.page + 1,
-      }), () => {
-        this.getData();
-      });
-    }
-  };
+onLoadMore = () => {
+  const { searchData, totalHits } = this.state;
+  if (searchData.length < totalHits) {
+    this.setState(prev => ({
+      page: prev.page + 1,
+    }), () => {
+      this.getData();
+    });
+  }
+};
 
   onHandleClickImage = (data = null) => {
     this.setState({ dataLargeImage: data });
